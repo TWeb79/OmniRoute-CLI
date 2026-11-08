@@ -38,7 +38,18 @@ export async function proxyRequest(
   providers: Provider[],
   routing: RoutingConfig,
   taskRouting?: Record<string, TaskRule>,
+  modelMap?: Record<string, string>,
 ): Promise<{ status: number; headers: Record<string, string>; body: ReadableStream | string }> {
+  // remap model name (e.g. claude-opus-5-5 → nvidia/nemotron-3-ultra-550b-a55b)
+  if (modelMap) {
+    const mapped = modelMap[body.model] ??
+      Object.entries(modelMap).find(([k]) => body.model.startsWith(k))?.[1];
+    if (mapped) {
+      console.log(`[omniroute-cli] model map: ${body.model} → ${mapped}`);
+      body = { ...body, model: mapped };
+    }
+  }
+
   const ordered = pickProviders(providers, routing.strategy);
 
   // task routing: if a rule matches, promote that model's provider to front

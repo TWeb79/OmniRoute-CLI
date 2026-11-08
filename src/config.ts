@@ -25,6 +25,7 @@ const ConfigSchema = z.object({
     fallback: z.boolean().default(true),
   }).default({}),
   task_routing: z.record(TaskRuleSchema).optional(),
+  model_map: z.record(z.string()).optional(),
   auth: z.object({
     enabled: z.boolean().default(false),
     api_key: z.string().optional(),

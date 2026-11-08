@@ -26,6 +26,7 @@ export interface Config {
   providers: Provider[];
   routing: RoutingConfig;
   task_routing?: Record<string, TaskRule>;
+  model_map?: Record<string, string>;
   auth: AuthConfig;
 }
 

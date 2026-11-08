@@ -110,6 +110,15 @@ task_routing:
       - earnings
     preferred_model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning   # reasoning model for analysis
 
+# Model name remapping — translates the model name the client sends to a real provider model.
+# Supports exact match or prefix match (first prefix that fits wins).
+# Essential for Claude Code, which sends claude-* model names.
+model_map:
+  claude-opus:   nvidia/nemotron-3-ultra-550b-a55b        # biggest free NVIDIA model
+  claude-sonnet: nvidia/nemotron-3.5-lightning-30b-a3b    # fast 30B MoE
+  claude-haiku:  nvidia/nemotron-3.5-bolt-e4b             # compact, lowest latency
+  claude:        nvidia/nemotron-3.5-lightning-30b-a3b    # catch-all for any other claude-*
+
 auth:
   enabled: false       # set to true to require a bearer token
   # api_key: "change-me"

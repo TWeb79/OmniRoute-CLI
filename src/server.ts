@@ -32,7 +32,7 @@ export async function createServer(config: Config) {
 
   app.post("/v1/chat/completions", async (req, reply) => {
     const body = req.body as ChatCompletionRequest;
-    const result = await proxyRequest(body, config.providers, config.routing, config.task_routing);
+    const result = await proxyRequest(body, config.providers, config.routing, config.task_routing, config.model_map);
 
     for (const [k, v] of Object.entries(result.headers)) {
       reply.header(k, v);
@@ -60,7 +60,7 @@ export async function createServer(config: Config) {
   app.post("/v1/messages", async (req, reply) => {
     const anthropicBody = req.body as Parameters<typeof toOpenAI>[0];
     const openAIBody = toOpenAI(anthropicBody);
-    const result = await proxyRequest(openAIBody, config.providers, config.routing, config.task_routing);
+    const result = await proxyRequest(openAIBody, config.providers, config.routing, config.task_routing, config.model_map);
 
     if (anthropicBody.stream && result.body instanceof ReadableStream) {
       reply.header("content-type", "text/event-stream");
