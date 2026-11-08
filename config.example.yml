@@ -87,7 +87,7 @@ task_routing:
       - script
       - error
       - exception
-    preferred_model: deepseek-ai/deepseek-v4.1-flash   # strong coder, free on NVIDIA
+    preferred_model: nvidia/nemotron-3.5-lightning-30b-a3b   # verified working; deepseek-v4.1-flash hung on the free tier
 
   analysis:
     keywords:
