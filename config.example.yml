@@ -32,6 +32,36 @@ providers:
   #     - mistral
   #   priority: 3
 
+  # NVIDIA NIM — free tier (no credit card, 40 RPM, ~1000 monthly credits)
+  # Get a free key at: https://build.nvidia.com → sign in → "Get API Key"
+  # Free-tier models as of 2026-11-08 (catalog changes — verify at build.nvidia.com/models)
+  - name: nvidia
+    api_key: "${NVIDIA_API_KEY}"
+    base_url: "https://integrate.api.nvidia.com/v1"
+    models:
+      # --- NVIDIA Nemotron family ---
+      - nvidia/nemotron-3.5-bolt-e4b           # compact, fast, agentic
+      - nvidia/nemotron-3.5-lightning-30b-a3b  # 30B MoE, fast
+      - nvidia/nemotron-3.5-super-vl-120b-a12b # 120B vision+language
+      - nvidia/nemotron-3-nano-omni-30b-a3b-reasoning
+      - nvidia/nemotron-3-ultra-550b-a55b      # largest free NVIDIA model
+      # --- Meta Llama ---
+      - meta/llama-3.2-11b-vision-instruct
+      - meta/llama-3.2-90b-vision-instruct
+      - meta/muse-glimmer-30b
+      # --- Google Gemma ---
+      - google/gemma-4-31b-it
+      - google/diffusiongemma-26b-a4b-it
+      # --- DeepSeek ---
+      - deepseek-ai/deepseek-v4.1-flash
+      # --- Other free models ---
+      - openai/gpt-oss-20b
+      - minimaxai/minimax-m3.1-flash
+      - stepfun-ai/step-5-preview
+      - poolside/laguna-xs-2.1
+      - z-ai/glm-5.3-flash
+    priority: 3   # used as fallback after paid providers
+
   # Example: OpenRouter (access 200+ models with one key)
   # - name: openrouter
   #   api_key: "${OPENROUTER_API_KEY}"
