@@ -1,0 +1,30 @@
+{
+  "name": "omniroute-cli",
+  "version": "1.0.0",
+  "description": "Lightweight CLI AI gateway — OpenAI-compatible proxy with file-based config, no dashboard",
+  "type": "module",
+  "bin": {
+    "omniroute-cli": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js start",
+    "dev": "node --loader ts-node/esm src/index.ts start"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "commander": "^12.1.0",
+    "fastify": "^4.28.1",
+    "js-yaml": "^4.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

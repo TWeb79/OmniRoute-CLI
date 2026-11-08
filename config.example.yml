@@ -1,0 +1,50 @@
+# OmniRoute-CLI configuration
+# Copy this to config.yml and fill in your API keys.
+# API key values support ${ENV_VAR} interpolation from the environment.
+
+port: 20128
+
+providers:
+  - name: openai
+    api_key: "${OPENAI_API_KEY}"
+    base_url: "https://api.openai.com/v1"
+    models:
+      - gpt-4o
+      - gpt-4o-mini
+      - gpt-3.5-turbo
+    priority: 1   # lower number = tried first
+
+  - name: anthropic
+    # Anthropic's API is OpenAI-compatible via their /v1 endpoint
+    api_key: "${ANTHROPIC_API_KEY}"
+    base_url: "https://api.anthropic.com/v1"
+    models:
+      - claude-sonnet-4-5
+      - claude-haiku-4-5
+    priority: 2
+
+  # Example: a local Ollama instance (free, no key needed)
+  # - name: ollama
+  #   api_key: "ollama"
+  #   base_url: "http://localhost:11434/v1"
+  #   models:
+  #     - llama3.2
+  #     - mistral
+  #   priority: 3
+
+  # Example: OpenRouter (access 200+ models with one key)
+  # - name: openrouter
+  #   api_key: "${OPENROUTER_API_KEY}"
+  #   base_url: "https://openrouter.ai/api/v1"
+  #   models:
+  #     - mistralai/mistral-7b-instruct:free
+  #     - google/gemma-2-9b-it:free
+  #   priority: 4
+
+routing:
+  strategy: priority   # priority | round-robin | random
+  fallback: true       # on provider error, try the next one automatically
+
+auth:
+  enabled: false       # set to true to require a bearer token
+  # api_key: "change-me"
