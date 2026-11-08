@@ -9,29 +9,40 @@ function pickProviders(providers: Provider[], strategy: RoutingConfig["strategy"
     return [...providers.slice(start), ...providers.slice(0, start)];
   }
   if (strategy === "random") {
-    return [...providers].sort(() => Math.random() - 0.5);
+    const a = [...providers]; // Fisher-Yates
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
   return providers;
 }
 
-function findProvider(providers: Provider[], model: string): Provider | undefined {
-  return providers.find((p) => p.models.includes(model)) ?? providers[0];
+function lastUserText(messages: ChatCompletionRequest["messages"]): string {
+  const last = [...messages].reverse().find((m) => m.role === "user");
+  if (!last) return "";
+  return (typeof last.content === "string" ? last.content : JSON.stringify(last.content)).toLowerCase();
 }
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function detectTask(
   messages: ChatCompletionRequest["messages"],
   rules: Record<string, TaskRule>,
 ): TaskRule | undefined {
-  // scan last user message for keyword matches
-  const text = messages
-    .filter((m) => m.role === "user")
-    .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
-    .join(" ")
-    .toLowerCase();
+  const text = lastUserText(messages);
   for (const rule of Object.values(rules)) {
-    if (rule.keywords.some((kw) => text.includes(kw.toLowerCase()))) return rule;
+    // whole-word match so "api" doesn't hit "capital"
+    if (rule.keywords.some((kw) => new RegExp(`\\b${escapeRe(kw.toLowerCase())}\\b`).test(text))) return rule;
   }
 }
+
+export type ProxyResult = {
+  status: number;
+  headers: Record<string, string>;
+  body: ReadableStream | string;
+};
 
 export async function proxyRequest(
   body: ChatCompletionRequest,
@@ -39,7 +50,7 @@ export async function proxyRequest(
   routing: RoutingConfig,
   taskRouting?: Record<string, TaskRule>,
   modelMap?: Record<string, string>,
-): Promise<{ status: number; headers: Record<string, string>; body: ReadableStream | string }> {
+): Promise<ProxyResult> {
   // remap model name (e.g. claude-opus-5-5 → nvidia/nemotron-3-ultra-550b-a55b)
   if (modelMap) {
     const mapped = modelMap[body.model] ??
@@ -50,44 +61,59 @@ export async function proxyRequest(
     }
   }
 
-  const ordered = pickProviders(providers, routing.strategy);
-
-  // task routing: if a rule matches, promote that model's provider to front
+  // task routing: a matching rule overrides the requested model
   const task = taskRouting ? detectTask(body.messages, taskRouting) : undefined;
-  const preferredModel = task?.preferred_model ?? body.model;
-  const primary = findProvider(ordered, preferredModel);
-  if (task) console.log(`[omniroute-cli] task matched → preferred model: ${preferredModel}`);
+  if (task) {
+    console.log(`[omniroute-cli] task matched → model: ${task.preferred_model}`);
+    body = { ...body, model: task.preferred_model };
+  }
 
-  const candidates = primary
-    ? [primary, ...ordered.filter((p) => p !== primary)]
-    : ordered;
-
+  // only providers that serve the model; if none list it, pass it through to all
+  const ordered = pickProviders(providers, routing.strategy);
+  const serving = ordered.filter((p) => p.models.includes(body.model));
+  const candidates = serving.length ? serving : ordered;
   const tryList = routing.fallback ? candidates : candidates.slice(0, 1);
 
-  let lastStatus = 500;
-  let lastBody = "No providers available";
+  let lastStatus = 502;
+  let lastBody = JSON.stringify({ error: { message: "No providers available" } });
 
   for (const provider of tryList) {
     const url = `${provider.base_url.replace(/\/$/, "")}/chat/completions`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${provider.api_key}`,
-      },
-      body: JSON.stringify(body),
-    });
+    let res: Response;
+    // timeout covers connect + response headers only; cleared so long streams aren't cut
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 60_000);
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${provider.api_key}`,
+        },
+        body: JSON.stringify(body),
+        signal: ac.signal,
+      });
+      clearTimeout(timer);
+    } catch (err) {
+      clearTimeout(timer);
+      lastStatus = 502;
+      lastBody = JSON.stringify({ error: { message: `${provider.name}: ${(err as Error).message}` } });
+      console.error(`[omniroute-cli] provider ${provider.name} unreachable: ${(err as Error).message}`);
+      continue;
+    }
 
     if (res.ok || !routing.fallback) {
       const headers: Record<string, string> = {};
       res.headers.forEach((v, k) => {
-        if (!["transfer-encoding", "connection"].includes(k)) headers[k] = v;
+        // fetch already decoded the body, so encoding/length headers would be wrong
+        if (!["transfer-encoding", "connection", "content-encoding", "content-length"].includes(k)) headers[k] = v;
       });
       headers["x-omniroute-provider"] = provider.name;
+      console.log(`[omniroute-cli] → ${provider.name} / ${body.model}`);
       return {
         status: res.status,
         headers,
-        body: body.stream ? (res.body as ReadableStream) : await res.text(),
+        body: body.stream && res.ok ? (res.body as ReadableStream) : await res.text(),
       };
     }
 

@@ -23,6 +23,7 @@ export interface AuthConfig {
 
 export interface Config {
   port: number;
+  host: string;
   providers: Provider[];
   routing: RoutingConfig;
   task_routing?: Record<string, TaskRule>;

@@ -1,7 +1,5 @@
 # OmniRoute-CLI
 
-> **⚠️ Work in progress — not yet functional. Expect breaking changes.**
-
 A lightweight, CLI-based AI gateway that runs as a backend service.  
 One OpenAI-compatible endpoint, multiple providers, file-based config — no dashboard, no database, no Electron.
 
@@ -30,7 +28,8 @@ The server starts on `http://localhost:20128/v1` by default.
 ## Use with Claude Code
 
 ```bash
-ANTHROPIC_BASE_URL=http://localhost:20128/v1 \
+# no /v1 — the client appends /v1/messages itself
+ANTHROPIC_BASE_URL=http://localhost:20128 \
 ANTHROPIC_API_KEY=your-local-key \
 claude
 ```
@@ -39,7 +38,7 @@ claude
 
 Point your tool at:
 - Base URL: `http://localhost:20128/v1`
-- API key: whatever you set in `auth.api_key` (or any string if auth is disabled)
+- API key: whatever you set in `auth.api_key` (or any string if auth is disabled); both `Authorization: Bearer` and `x-api-key` are accepted
 
 ## Configuration
 
@@ -48,6 +47,7 @@ See [`config.example.yml`](config.example.yml) for all options.
 | Field | Description |
 |---|---|
 | `port` | Server port (default: 20128) |
+| `host` | Bind address (default: `127.0.0.1`; use `0.0.0.0` only with `auth.enabled`) |
 | `providers[].name` | Display name |
 | `providers[].api_key` | API key — supports `${ENV_VAR}` |
 | `providers[].base_url` | Provider's OpenAI-compatible base URL |
@@ -65,7 +65,8 @@ See [`config.example.yml`](config.example.yml) for all options.
 | `GET` | `/health` | Health check |
 | `GET` | `/v1/models` | List all configured models |
 | `POST` | `/v1/chat/completions` | Proxy chat completions (OpenAI format) |
-| `POST` | `/v1/messages` | Proxy completions (Anthropic format — translated internally) |
+| `POST` | `/v1/messages` | Proxy completions (Anthropic format, incl. tools and streaming — translated internally) |
+| `POST` | `/v1/messages/count_tokens` | Rough token estimate (~4 chars/token) |
 
 ## Build from source
 
