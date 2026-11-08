@@ -1,7 +1,11 @@
 # OmniRoute-CLI
 
+> **⚠️ Work in progress — not yet functional. Expect breaking changes.**
+
 A lightweight, CLI-based AI gateway that runs as a backend service.  
 One OpenAI-compatible endpoint, multiple providers, file-based config — no dashboard, no database, no Electron.
+
+Also bridges Anthropic's `/v1/messages` API, so tools like Claude Code can point at it directly without format translation on the client side.
 
 Inspired by [OmniRoute](https://github.com/cheaper-inference/OmniRoute).
 
@@ -60,7 +64,8 @@ See [`config.example.yml`](config.example.yml) for all options.
 |---|---|---|
 | `GET` | `/health` | Health check |
 | `GET` | `/v1/models` | List all configured models |
-| `POST` | `/v1/chat/completions` | Proxy chat completions |
+| `POST` | `/v1/chat/completions` | Proxy chat completions (OpenAI format) |
+| `POST` | `/v1/messages` | Proxy completions (Anthropic format — translated internally) |
 
 ## Build from source
 
