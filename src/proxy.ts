@@ -1,4 +1,4 @@
-import type { Provider, RoutingConfig, ChatCompletionRequest } from "./types.js";
+import type { Provider, RoutingConfig, TaskRule, ChatCompletionRequest } from "./types.js";
 
 let rrIndex = 0;
 
@@ -11,22 +11,42 @@ function pickProviders(providers: Provider[], strategy: RoutingConfig["strategy"
   if (strategy === "random") {
     return [...providers].sort(() => Math.random() - 0.5);
   }
-  // priority: already sorted ascending in loadConfig
   return providers;
 }
 
 function findProvider(providers: Provider[], model: string): Provider | undefined {
-  // prefer a provider that explicitly lists this model, else first
   return providers.find((p) => p.models.includes(model)) ?? providers[0];
+}
+
+function detectTask(
+  messages: ChatCompletionRequest["messages"],
+  rules: Record<string, TaskRule>,
+): TaskRule | undefined {
+  // scan last user message for keyword matches
+  const text = messages
+    .filter((m) => m.role === "user")
+    .map((m) => (typeof m.content === "string" ? m.content : JSON.stringify(m.content)))
+    .join(" ")
+    .toLowerCase();
+  for (const rule of Object.values(rules)) {
+    if (rule.keywords.some((kw) => text.includes(kw.toLowerCase()))) return rule;
+  }
 }
 
 export async function proxyRequest(
   body: ChatCompletionRequest,
   providers: Provider[],
   routing: RoutingConfig,
+  taskRouting?: Record<string, TaskRule>,
 ): Promise<{ status: number; headers: Record<string, string>; body: ReadableStream | string }> {
   const ordered = pickProviders(providers, routing.strategy);
-  const primary = findProvider(ordered, body.model);
+
+  // task routing: if a rule matches, promote that model's provider to front
+  const task = taskRouting ? detectTask(body.messages, taskRouting) : undefined;
+  const preferredModel = task?.preferred_model ?? body.model;
+  const primary = findProvider(ordered, preferredModel);
+  if (task) console.log(`[omniroute-cli] task matched → preferred model: ${preferredModel}`);
+
   const candidates = primary
     ? [primary, ...ordered.filter((p) => p !== primary)]
     : ordered;

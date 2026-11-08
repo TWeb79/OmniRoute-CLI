@@ -12,6 +12,11 @@ const ProviderSchema = z.object({
   priority: z.number().int().default(1),
 });
 
+const TaskRuleSchema = z.object({
+  keywords: z.array(z.string()),
+  preferred_model: z.string(),
+});
+
 const ConfigSchema = z.object({
   port: z.number().int().default(20128),
   providers: z.array(ProviderSchema).min(1, "At least one provider required"),
@@ -19,6 +24,7 @@ const ConfigSchema = z.object({
     strategy: z.enum(["priority", "round-robin", "random"]).default("priority"),
     fallback: z.boolean().default(true),
   }).default({}),
+  task_routing: z.record(TaskRuleSchema).optional(),
   auth: z.object({
     enabled: z.boolean().default(false),
     api_key: z.string().optional(),

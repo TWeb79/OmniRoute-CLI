@@ -31,7 +31,7 @@ export async function createServer(config: Config) {
 
   app.post("/v1/chat/completions", async (req, reply) => {
     const body = req.body as ChatCompletionRequest;
-    const result = await proxyRequest(body, config.providers, config.routing);
+    const result = await proxyRequest(body, config.providers, config.routing, config.task_routing);
 
     for (const [k, v] of Object.entries(result.headers)) {
       reply.header(k, v);

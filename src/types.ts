@@ -11,6 +11,11 @@ export interface RoutingConfig {
   fallback: boolean;
 }
 
+export interface TaskRule {
+  keywords: string[];
+  preferred_model: string;
+}
+
 export interface AuthConfig {
   enabled: boolean;
   api_key?: string;
@@ -20,6 +25,7 @@ export interface Config {
   port: number;
   providers: Provider[];
   routing: RoutingConfig;
+  task_routing?: Record<string, TaskRule>;
   auth: AuthConfig;
 }
 

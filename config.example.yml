@@ -5,34 +5,7 @@
 port: 20128
 
 providers:
-  - name: openai
-    api_key: "${OPENAI_API_KEY}"
-    base_url: "https://api.openai.com/v1"
-    models:
-      - gpt-4o
-      - gpt-4o-mini
-      - gpt-3.5-turbo
-    priority: 1   # lower number = tried first
-
-  - name: anthropic
-    # Anthropic's API is OpenAI-compatible via their /v1 endpoint
-    api_key: "${ANTHROPIC_API_KEY}"
-    base_url: "https://api.anthropic.com/v1"
-    models:
-      - claude-sonnet-4-5
-      - claude-haiku-4-5
-    priority: 2
-
-  # Example: a local Ollama instance (free, no key needed)
-  # - name: ollama
-  #   api_key: "ollama"
-  #   base_url: "http://localhost:11434/v1"
-  #   models:
-  #     - llama3.2
-  #     - mistral
-  #   priority: 3
-
-  # NVIDIA NIM — free tier (no credit card, 40 RPM, ~1000 monthly credits)
+  # NVIDIA NIM — free tier, tried first (40 RPM, ~1000 monthly credits)
   # Get a free key at: https://build.nvidia.com → sign in → "Get API Key"
   # Free-tier models as of 2026-11-08 (catalog changes — verify at build.nvidia.com/models)
   - name: nvidia
@@ -60,20 +33,82 @@ providers:
       - stepfun-ai/step-5-preview
       - poolside/laguna-xs-2.1
       - z-ai/glm-5.3-flash
-    priority: 3   # used as fallback after paid providers
+    priority: 1   # first choice — free
 
-  # Example: OpenRouter (access 200+ models with one key)
-  # - name: openrouter
-  #   api_key: "${OPENROUTER_API_KEY}"
-  #   base_url: "https://openrouter.ai/api/v1"
+  - name: openai
+    api_key: "${OPENAI_API_KEY}"
+    base_url: "https://api.openai.com/v1"
+    models:
+      - gpt-4o
+      - gpt-4o-mini
+      - gpt-3.5-turbo
+    priority: 2   # fallback when NVIDIA hits rate limit or lacks the model
+
+  - name: anthropic
+    api_key: "${ANTHROPIC_API_KEY}"
+    base_url: "https://api.anthropic.com/v1"
+    models:
+      - claude-sonnet-4-5
+      - claude-haiku-4-5
+    priority: 3   # final fallback
+
+  # Example: a local Ollama instance (free, no key needed)
+  # - name: ollama
+  #   api_key: "ollama"
+  #   base_url: "http://localhost:11434/v1"
   #   models:
-  #     - mistralai/mistral-7b-instruct:free
-  #     - google/gemma-2-9b-it:free
+  #     - llama3.2
+  #     - mistral
   #   priority: 4
 
 routing:
   strategy: priority   # priority | round-robin | random
   fallback: true       # on provider error, try the next one automatically
+
+# Task-aware routing: match keywords in the user message → prefer a specific model.
+# The matched model's provider is promoted to the front of the try list.
+# Falls back to normal priority order if that provider is unavailable.
+task_routing:
+  coding:
+    keywords:
+      - function
+      - class
+      - bug
+      - debug
+      - refactor
+      - python
+      - javascript
+      - typescript
+      - react
+      - sql
+      - api
+      - code
+      - implement
+      - script
+      - error
+      - exception
+    preferred_model: deepseek-ai/deepseek-v4.1-flash   # strong coder, free on NVIDIA
+
+  analysis:
+    keywords:
+      - stock
+      - ticker
+      - price
+      - chart
+      - trend
+      - portfolio
+      - market
+      - trading
+      - forecast
+      - indicator
+      - RSI
+      - MACD
+      - moving average
+      - backtest
+      - candlestick
+      - volume
+      - earnings
+    preferred_model: nvidia/nemotron-3-nano-omni-30b-a3b-reasoning   # reasoning model for analysis
 
 auth:
   enabled: false       # set to true to require a bearer token
